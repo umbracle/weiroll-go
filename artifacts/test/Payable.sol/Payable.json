@@ -1,0 +1,39 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "Payable",
+  "sourceName": "contracts/test/Payable.sol",
+  "abi": [
+    {
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "inputs": [],
+      "name": "balance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pay",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b5060cf8061001f6000396000f3fe60806040526004361060295760003560e01c80631b9265b8146031578063b69ef8a814603957602f565b36602f57005b005b6037605f565b005b348015604457600080fd5b50604b6061565b604051605691906080565b60405180910390f35b565b600047905090565b6000819050919050565b607a816069565b82525050565b6000602082019050609360008301846073565b9291505056fea2646970667358221220bf06f6cba9fb45771d721380d5af72a28d61a5c61a418e4ac6c9b68d87a7ac1f64736f6c634300080b0033",
+  "deployedBytecode": "0x60806040526004361060295760003560e01c80631b9265b8146031578063b69ef8a814603957602f565b36602f57005b005b6037605f565b005b348015604457600080fd5b50604b6061565b604051605691906080565b60405180910390f35b565b600047905090565b6000819050919050565b607a816069565b82525050565b6000602082019050609360008301846073565b9291505056fea2646970667358221220bf06f6cba9fb45771d721380d5af72a28d61a5c61a418e4ac6c9b68d87a7ac1f64736f6c634300080b0033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
