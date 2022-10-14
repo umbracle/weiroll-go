@@ -19,6 +19,36 @@ func NewPlanner() *Planner {
 	return p
 }
 
+type Contract struct {
+	addr ethgo.Address
+	abi  *abi.ABI
+}
+
+func NewContract(addr ethgo.Address, abi *abi.ABI) *Contract {
+	return &Contract{addr: addr, abi: abi}
+}
+
+func (c *Contract) Call(methodName string, args ...interface{}) *Command {
+	cmd, err := c.CallErr(methodName, args...)
+	if err != nil {
+		panic(err)
+	}
+	return cmd
+}
+
+func (c *Contract) CallErr(methodName string, args ...interface{}) (*Command, error) {
+	method := c.abi.GetMethod(methodName)
+	if method == nil {
+		return nil, fmt.Errorf("method not found")
+	}
+	cmd := &Command{
+		Address: c.addr,
+		Method:  method,
+		Args:    args,
+	}
+	return cmd, nil
+}
+
 type ReturnValue struct {
 	c *Command
 }
@@ -196,8 +226,6 @@ func (p *Planner) Plan() (*Input, error) {
 				}
 			}
 			freeSlots = append(freeSlots, gcSlots...)
-
-			fmt.Println(gcSlots)
 
 			// consider this state done
 			doneMap[cmd.ret] = struct{}{}

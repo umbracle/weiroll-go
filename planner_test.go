@@ -41,16 +41,11 @@ func readArtifact(path string) (a *artifact) {
 	return
 }
 
-type contract struct {
-	addr ethgo.Address
-	*artifact
-}
-
 func TestServer(t *testing.T) {
 	server := testutil.NewTestServer(t, nil)
 	defer server.Close()
 
-	contracts := map[string]*contract{}
+	contracts := map[string]*Contract{}
 	for _, name := range []string{
 		"test/TestableVM",
 		"test/Sender",
@@ -64,10 +59,7 @@ func TestServer(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		contracts[ar.Name] = &contract{
-			artifact: ar,
-			addr:     receipt.ContractAddress,
-		}
+		contracts[ar.Name] = NewContract(receipt.ContractAddress, ar.ABI)
 	}
 
 	vm := contracts["TestableVM"]
@@ -75,31 +67,15 @@ func TestServer(t *testing.T) {
 	math := contracts["Math"]
 
 	p := NewPlanner()
-	ret1 := p.Add(&Command{
-		Address: math.addr,
-		Method:  math.ABI.GetMethod("add"),
-		Args:    []interface{}{1, 2},
-	})
-	ret2 := p.Add(&Command{
-		Address: math.addr,
-		Method:  math.ABI.GetMethod("add"),
-		Args:    []interface{}{3, 4},
-	})
-	ret3 := p.Add(&Command{
-		Address: math.addr,
-		Method:  math.ABI.GetMethod("add"),
-		Args:    []interface{}{ret1, ret2},
-	})
-	p.Add(&Command{
-		Address: events.addr,
-		Method:  events.ABI.GetMethod("logUint"),
-		Args:    []interface{}{ret3},
-	})
+	ret1 := p.Add(math.Call("add", 1, 2))
+	ret2 := p.Add(math.Call("add", 3, 4))
+	ret3 := p.Add(math.Call("add", ret1, ret2))
+	p.Add(events.Call("logUint", ret3))
 
 	planInput, err := p.Plan()
 	assert.NoError(t, err)
 
-	input, err := vm.ABI.GetMethod("execute").Encode([]interface{}{planInput.Commands, planInput.State})
+	input, err := vm.abi.GetMethod("execute").Encode([]interface{}{planInput.Commands, planInput.State})
 	assert.NoError(t, err)
 
 	receipt, err := server.SendTxn(&ethgo.Transaction{
@@ -108,7 +84,7 @@ func TestServer(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	res, err := abi.ParseLog(events.ABI.Events["LogUint"].Inputs, receipt.Logs[0])
+	res, err := abi.ParseLog(events.abi.Events["LogUint"].Inputs, receipt.Logs[0])
 	assert.NoError(t, err)
 	assert.Equal(t, res["message"].(*big.Int), big.NewInt(10))
 }
