@@ -41,6 +41,18 @@ func readArtifact(path string) (a *artifact) {
 	return
 }
 
+type receipt struct {
+	t      *testing.T
+	raw    *ethgo.Receipt
+	events *Contract
+}
+
+func (r *receipt) Expect(log string, val interface{}) {
+	res, err := abi.ParseLog(r.events.abi.Events[log].Inputs, r.raw.Logs[0])
+	assert.NoError(r.t, err)
+	assert.Equal(r.t, res["message"], val)
+}
+
 func TestServer(t *testing.T) {
 	server := testutil.NewTestServer(t, nil)
 	defer server.Close()
@@ -62,29 +74,44 @@ func TestServer(t *testing.T) {
 		contracts[ar.Name] = NewContract(receipt.ContractAddress, ar.ABI)
 	}
 
-	vm := contracts["TestableVM"]
-	events := contracts["Events"]
 	math := contracts["Math"]
+	events := contracts["Events"]
+	sender := contracts["Sender"]
 
-	p := NewPlanner()
-	ret1 := p.Add(math.Call("add", 1, 2))
-	ret2 := p.Add(math.Call("add", 3, 4))
-	ret3 := p.Add(math.Call("add", ret1, ret2))
-	p.Add(events.Call("logUint", ret3))
+	submit := func(planner *Planner) *receipt {
+		plan, err := planner.Plan()
+		assert.NoError(t, err)
 
-	planInput, err := p.Plan()
-	assert.NoError(t, err)
+		vm := contracts["TestableVM"]
 
-	input, err := vm.abi.GetMethod("execute").Encode([]interface{}{planInput.Commands, planInput.State})
-	assert.NoError(t, err)
+		input, err := vm.abi.GetMethod("execute").Encode([]interface{}{plan.Commands, plan.State})
+		assert.NoError(t, err)
 
-	receipt, err := server.SendTxn(&ethgo.Transaction{
-		To:    &vm.addr,
-		Input: input,
+		raw, err := server.SendTxn(&ethgo.Transaction{
+			To:    &vm.addr,
+			Input: input,
+		})
+		assert.NoError(t, err)
+		return &receipt{raw: raw, t: t, events: contracts["Events"]}
+	}
+
+	t.Run("", func(t *testing.T) {
+		p := NewPlanner()
+		ret1 := p.Add(math.Call("add", 1, 2))
+		ret2 := p.Add(math.Call("add", 3, 4))
+		ret3 := p.Add(math.Call("add", ret1, ret2))
+		p.Add(events.Call("logUint", ret3))
+
+		receipt := submit(p)
+		receipt.Expect("LogUint", big.NewInt(10))
 	})
-	assert.NoError(t, err)
 
-	res, err := abi.ParseLog(events.abi.Events["LogUint"].Inputs, receipt.Logs[0])
-	assert.NoError(t, err)
-	assert.Equal(t, res["message"].(*big.Int), big.NewInt(10))
+	t.Run("", func(t *testing.T) {
+		p := NewPlanner()
+		ret1 := p.Add(sender.Call("sender"))
+		p.Add(events.Call("logAddress", ret1))
+
+		receipt := submit(p)
+		receipt.Expect("LogAddress", server.Account(0))
+	})
 }

@@ -58,7 +58,7 @@ func (p *Planner) Add(c *Command) *ReturnValue {
 	return &ReturnValue{c: c}
 }
 
-type Input struct {
+type Plan struct {
 	Commands [][32]byte
 	State    [][]byte
 }
@@ -92,7 +92,7 @@ type command2 struct {
 	impl *Command
 }
 
-func (p *Planner) Plan() (*Input, error) {
+func (p *Planner) Plan() (*Plan, error) {
 	// decode state
 
 	cmds := [][32]byte{}
@@ -267,7 +267,7 @@ func (p *Planner) Plan() (*Input, error) {
 		cmds = append(cmds, realCmd)
 	}
 
-	return &Input{Commands: cmds, State: state}, nil
+	return &Plan{Commands: cmds, State: state}, nil
 }
 
 type CommandType string
